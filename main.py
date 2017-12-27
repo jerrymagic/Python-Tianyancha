@@ -107,7 +107,18 @@ def tyc_data(driver, url, keyword):
                 lpblock = tycdata.select("div.human-top > div > div > a")
                 lpname = lpblock[0].text
                 cpstatus = tycdata.find_all("div", class_=re.compile(r"\bstatusType\d"))[0].text
-                print lpname, cpstatus
+                cpinfo = tycdata.select(
+                    "div#_container_baseInfo > div > div.base0910 > table.companyInfo-table > tbody > tr > td"
+                )
+                lineob = tycdata.select(
+                    "div#_container_baseInfo > div > div.base0910 > table.companyInfo-table > tbody > tr > td > span > span > span.hidden"
+                )
+                print keyword
+                print lpname
+                print cpstatus
+                for a in [1, 3, 6, 8, 10, 12, 14, 18]:
+                    print cpinfo[a].text
+                print lineob[0].text
 
 
 
