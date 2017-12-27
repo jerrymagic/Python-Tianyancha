@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 
-import xlrd, arrow, urllib
+import xlrd, arrow, urllib, re
 from selenium import webdriver
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -73,7 +73,7 @@ def tyc_data(driver, url, keyword):
     :param driver: brower
     :param url: url
     :param keyword: keyword
-    :return: BeautifulSoup obj
+    :return: tyc date
     """
     driver.get(url)
     try:
@@ -94,7 +94,20 @@ def tyc_data(driver, url, keyword):
         hiscmsname = hname[0].text if len(hname) > 0 else None
         if cmname == keyword or hiscmsname == keyword:
             company_url = tycsoup.select('div.search_result_single > div.search_right_item > div > a.query_name')[0].get('href')
-            print company_url
+            driver.get(company_url)
+            try:
+                element = WebDriverWait(driver, 60).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "new-foot-v1"))
+                )
+            except Exception as e:
+                print e
+            finally:
+                source = driver.page_source.encode("utf-8")
+                tycdata = BeautifulSoup(source, 'html.parser')
+                lpblock = tycdata.select("div.human-top > div > div > a")
+                lpname = lpblock[0].text
+                cpstatus = tycdata.find_all("div", class_=re.compile(r"\bstatusType\d"))[0].text
+                print lpname, cpstatus
 
 
 
