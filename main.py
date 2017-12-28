@@ -9,7 +9,8 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-
+from openpyxl.workbook import Workbook
+import random, time
 
 def openexcel(file):
     """
@@ -69,7 +70,7 @@ def browserdriver():
 
 def tyc_data(driver, url, keyword):
     """
-    get page source code
+    get Tianyancha Data
     :param driver: brower
     :param url: url
     :param keyword: keyword
@@ -107,6 +108,9 @@ def tyc_data(driver, url, keyword):
                 lpblock = tycdata.select("div.human-top > div > div > a")
                 lpname = lpblock[0].text
                 cpstatus = tycdata.find_all("div", class_=re.compile(r"\bstatusType\d"))[0].text
+                reginfo = tycdata.select(
+                    "div#_container_baseInfo > div > div > table.companyInfo-table > tbody > tr > td > div > div > div.baseinfo-module-content-value > text.tyc-num"
+                )
                 cpinfo = tycdata.select(
                     "div#_container_baseInfo > div > div.base0910 > table.companyInfo-table > tbody > tr > td"
                 )
@@ -116,11 +120,49 @@ def tyc_data(driver, url, keyword):
                 print keyword
                 print lpname
                 print cpstatus
-                for a in [1, 3, 6, 8, 10, 12, 14, 18]:
+                binfo = [
+                    keyword, cpstatus, lpname
+                ]
+                for regdata in reginfo:
+                    print regdecode(regdata.text)
+                    binfo.append(regdecode(regdata.text))
+                print regdecode(cpinfo[16].text)
+                binfo.append(regdecode(cpinfo[16].text))
+                for a in [1, 3, 6, 8, 10, 12, 14, 18, 22]:
                     print cpinfo[a].text
+                    binfo.append(cpinfo[a].text)
                 print lineob[0].text
+                binfo.append(lineob[0].text)
+                return binfo
+        else:
+            print '暂无信息'
+            binfo = [keyword, "暂无信息"]
+            return binfo
 
 
+def regdecode(str):
+    codedict = {
+        '5': '.',
+        '6': '0',
+        '8': '1',
+        '.': '2',
+        '1': '3',
+        '0': '4',
+        '9': '5',
+        '3': '6',
+        '2': '7',
+        '4': '8',
+        '7': '9'
+    }
+    strlist = list(str)
+    regdata = []
+    for stra in strlist:
+        if stra in codedict.keys():
+            regdata.append(codedict[stra])
+        else:
+            print 'error'
+            regdata.append(stra)
+    return "".join(regdata)
 
 
 def main(logfile, excelfile):
@@ -129,11 +171,27 @@ def main(logfile, excelfile):
     except Exception as e:
         print e
     now = arrow.now()
+    newexcelfile =  "" + arrow.now().format("YYYY-MM-DD HH_mm_ss") + ".xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append([
+        "公司名称", "公司状态", "法人名称", "注册资本", "注册时间", "核准时间", "工商注册号", "组织机构代码", "信用识别代码",
+        "公司类型", "纳税人识别号", "行业", "营业期限", "登记机关", "注册地址", "经营范围"
+    ])
     for sheet in readsheets('cxgs.xlsx'):
         for cmyname in readdata(sheet):
             keyword = urllib.quote(cmyname.encode("utf-8"))
             tycurl = "https://www.tianyancha.com/search?key=" + keyword + "&checkFrom=searchBox"
-            tyc_data(driver, tycurl, cmyname)
+            binfo = tyc_data(driver, tycurl, cmyname)
+            if binfo is None:
+                pass
+            else:
+                ws.append(binfo)
+            a = random.randint(10, 120)
+            print "采集完毕，等待" + str(a) + "秒"
+            time.sleep(a)
+    wb.save(filename=newexcelfile)
+
 
 
 if __name__ == '__main__':
