@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 
-import xlrd, arrow, urllib, re
+import xlrd, arrow, urllib, re, os
 from selenium import webdriver
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -11,6 +11,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from openpyxl.workbook import Workbook
 import random, time
+from PIL import Image, ImageFont, ImageDraw
+import pytesseract
 
 def openexcel(file):
     """
@@ -60,11 +62,14 @@ def browserdriver():
     start driver
     :return: driver obj
     """
-    dcap = dict(DesiredCapabilities.PHANTOMJS)
-    dcap["phantomjs.page.settings.userAgent"] = (
-        "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36"
-    )
-    driver = webdriver.PhantomJS(executable_path='lib/phantomjs', desired_capabilities=dcap)
+    headers = {
+        'Referer':'https://www.baidu.com',
+        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36'
+    }
+    for key, value in enumerate(headers):
+        capability_key = 'phantomjs.page.customHeaders.{}'.format(key)
+        webdriver.DesiredCapabilities.PHANTOMJS[capability_key] = value
+    driver = webdriver.PhantomJS(executable_path='lib/phantomjs.exe')
     return driver
 
 
@@ -141,28 +146,43 @@ def tyc_data(driver, url, keyword):
 
 
 def regdecode(str):
-    codedict = {
-        '5': '.',
-        '6': '0',
-        '8': '1',
-        '.': '2',
-        '1': '3',
-        '0': '4',
-        '9': '5',
-        '3': '6',
-        '2': '7',
-        '4': '8',
-        '7': '9'
-    }
-    strlist = list(str)
-    regdata = []
-    for stra in strlist:
-        if stra in codedict.keys():
-            regdata.append(codedict[stra])
+   pass 
+
+
+def gettycfont(driver):
+    driver.get("https://www.tianyancha.com/")
+    pagesouup = BeautifulSoup(driver.page_source, 'html.parser')
+    csssheet = pagesouup.find_all("link", rel="stylesheet")
+    for link in csssheet:
+        csshref = link.get('href')
+        if 'main' in csshref:
+            print csshref
+            driver.get(csshref)
+            csscode = driver.page_source
+            recode = re.findall(r"\btyc-num-\w*.ttf", csscode)
+            if recode[0] is not None:
+                print 'download font'
+                fonturl = "https://static.tianyancha.com/web-require-js/public/fonts/"+recode[0]
+                urllib.urlretrieve(fonturl, recode[0])
+            print recode[0]
+            getmaping(recode[0])
         else:
-            print 'error'
-            regdata.append(stra)
-    return "".join(regdata)
+            pass
+
+
+def getmaping(fontfile):
+    text = r" 0 1 2 3 4 5 6 7 8 9 ."
+    im = Image.new("RGB", (1000, 100), (255, 255, 255))
+    dr = ImageDraw.Draw(im)
+    font = ImageFont.truetype(fontfile, 32)
+    dr.text((10, 10), text, font=font, fill="#000000")
+    im.show()
+    im.save("t.png")
+    fontimage = Image.open("t.png")
+    numlist = list(pytesseract.image_to_string(fontimage))
+    for n in numlist:
+        print n
+
 
 
 def main(logfile, excelfile):
@@ -171,6 +191,9 @@ def main(logfile, excelfile):
     except Exception as e:
         print e
     now = arrow.now()
+    # gettycfont(driver)
+    getmaping("tyc-num-807601bf2c.ttf")
+    """
     newexcelfile =  "" + arrow.now().format("YYYY-MM-DD HH_mm_ss") + ".xlsx"
     wb = Workbook()
     ws = wb.active
@@ -178,6 +201,7 @@ def main(logfile, excelfile):
         "公司名称", "公司状态", "法人名称", "注册资本", "注册时间", "核准时间", "工商注册号", "组织机构代码", "信用识别代码",
         "公司类型", "纳税人识别号", "行业", "营业期限", "登记机关", "注册地址", "经营范围"
     ])
+    
     for sheet in readsheets('cxgs.xlsx'):
         for cmyname in readdata(sheet):
             keyword = urllib.quote(cmyname.encode("utf-8"))
@@ -191,7 +215,8 @@ def main(logfile, excelfile):
             print "采集完毕，等待" + str(a) + "秒"
             time.sleep(a)
     wb.save(filename=newexcelfile)
-
+    """
+    driver.quit()
 
 
 if __name__ == '__main__':
