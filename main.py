@@ -165,13 +165,13 @@ def gettycfont(driver):
                 fonturl = "https://static.tianyancha.com/web-require-js/public/fonts/"+recode[0]
                 urllib.urlretrieve(fonturl, recode[0])
             print recode[0]
-            getmaping(recode[0])
+            return getmaping(recode[0])
         else:
             pass
 
 
 def getmaping(fontfile):
-    text = r" 0 1 2 3 4 5 6 7 8 9 ."
+    text = r" 0 1 2 3 4 5 6 7 8 9 . "
     im = Image.new("RGB", (1000, 100), (255, 255, 255))
     dr = ImageDraw.Draw(im)
     font = ImageFont.truetype(fontfile, 32)
@@ -179,9 +179,38 @@ def getmaping(fontfile):
     im.show()
     im.save("t.png")
     fontimage = Image.open("t.png")
-    numlist = list(pytesseract.image_to_string(fontimage))
-    for n in numlist:
-        print n
+    numlist = tuple(pytesseract.image_to_string(fontimage))
+    print pytesseract.image_to_string(fontimage)
+    mapfont = {
+        '0': str(numlist[0]),
+        '1': str(numlist[1]),
+        '2': str(numlist[2]),
+        '3': str(numlist[3]),
+        '4': str(numlist[4]),
+        '5': str(numlist[5]),
+        '6': str(numlist[6]),
+        '7': str(numlist[7]),
+        '8': str(numlist[8]),
+        '9': str(numlist[9]),
+        '.': str(numlist[10]),
+        
+
+    }
+    return mapfont
+
+
+def regdecode(mapfont, regstr):
+    strlist = list(regstr)
+    regdata = []
+    for stra in strlist:
+        if stra in mapfont.keys():
+            regdata.append(mapfont[stra])
+        else:
+            print 'error'
+            regdata.append(stra)
+    print "".join(regdata)
+    return "".join(regdata)
+        
 
 
 
@@ -191,8 +220,10 @@ def main(logfile, excelfile):
     except Exception as e:
         print e
     now = arrow.now()
-    # gettycfont(driver)
-    getmaping("tyc-num-807601bf2c.ttf")
+    
+    maping = gettycfont(driver)
+    print maping
+    regdecode(maping, "9496259.....")
     """
     newexcelfile =  "" + arrow.now().format("YYYY-MM-DD HH_mm_ss") + ".xlsx"
     wb = Workbook()
