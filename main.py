@@ -73,7 +73,7 @@ def browserdriver():
     return driver
 
 
-def tyc_data(driver, url, keyword):
+def tyc_data(driver, url, keyword, fontname):
     """
     get Tianyancha Data
     :param driver: brower
@@ -129,10 +129,10 @@ def tyc_data(driver, url, keyword):
                     keyword, cpstatus, lpname
                 ]
                 for regdata in reginfo:
-                    print regdecode(regdata.text)
-                    binfo.append(regdecode(regdata.text))
-                print regdecode(cpinfo[16].text)
-                binfo.append(regdecode(cpinfo[16].text))
+                    print regdecode(regdata.text, fontname)
+                    binfo.append(regdecode(regdata.text, fontname))
+                print regdecode(cpinfo[16].text, fontname)
+                binfo.append(regdecode(cpinfo[16].text, fontname))
                 for a in [1, 3, 6, 8, 10, 12, 14, 18, 22]:
                     print cpinfo[a].text
                     binfo.append(cpinfo[a].text)
@@ -143,10 +143,6 @@ def tyc_data(driver, url, keyword):
             print '暂无信息'
             binfo = [keyword, "暂无信息"]
             return binfo
-
-
-def regdecode(str):
-   pass 
 
 
 def gettycfont(driver):
@@ -165,9 +161,28 @@ def gettycfont(driver):
                 fonturl = "https://static.tianyancha.com/web-require-js/public/fonts/"+recode[0]
                 urllib.urlretrieve(fonturl, recode[0])
             print recode[0]
-            return getmaping(recode[0])
+            return getmaping(recode[0]), recode[0]
         else:
             pass
+
+
+def fonttest(driver, fontfile):
+    driver.get("https://www.tianyancha.com/")
+    pagesouup = BeautifulSoup(driver.page_source, 'html.parser')
+    csssheet = pagesouup.find_all("link", rel="stylesheet")
+    for link in csssheet:
+        csshref = link.get('href')
+        if 'main' in csshref:
+            print csshref
+            driver.get(csshref)
+            csscode = driver.page_source
+            recode = re.findall(r"\btyc-num-\w*.ttf", csscode)
+            if recode[0] is not None:
+                print recode[0]
+                if recode[0] == fontfile:
+                    return True
+                else:
+                    return False
 
 
 def getmaping(fontfile):
@@ -212,32 +227,29 @@ def regdecode(mapfont, regstr):
     return "".join(regdata)
         
 
-
-
 def main(logfile, excelfile):
     try:
         driver = browserdriver()
     except Exception as e:
         print e
     now = arrow.now()
-    
-    maping = gettycfont(driver)
-    print maping
-    regdecode(maping, "9496259.....")
-    """
-    newexcelfile =  "" + arrow.now().format("YYYY-MM-DD HH_mm_ss") + ".xlsx"
+    maping, fontname = gettycfont(driver)
+    newexcelfile = "" + arrow.now().format("YYYY-MM-DD HH_mm_ss") + ".xlsx"
     wb = Workbook()
     ws = wb.active
     ws.append([
         "公司名称", "公司状态", "法人名称", "注册资本", "注册时间", "核准时间", "工商注册号", "组织机构代码", "信用识别代码",
         "公司类型", "纳税人识别号", "行业", "营业期限", "登记机关", "注册地址", "经营范围"
     ])
-    
     for sheet in readsheets('cxgs.xlsx'):
         for cmyname in readdata(sheet):
+            if fonttest(driver, fontname):
+                print "encrypt not change"
+            else:
+                maping, fontname = gettycfont(driver)
             keyword = urllib.quote(cmyname.encode("utf-8"))
             tycurl = "https://www.tianyancha.com/search?key=" + keyword + "&checkFrom=searchBox"
-            binfo = tyc_data(driver, tycurl, cmyname)
+            binfo = tyc_data(driver, tycurl, cmyname, fontname)
             if binfo is None:
                 pass
             else:
@@ -246,7 +258,6 @@ def main(logfile, excelfile):
             print "采集完毕，等待" + str(a) + "秒"
             time.sleep(a)
     wb.save(filename=newexcelfile)
-    """
     driver.quit()
 
 
